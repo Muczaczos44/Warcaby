@@ -155,8 +155,8 @@ Camera:
   m_GameObject: {fileID: 330585543}
   m_Enabled: 1
   serializedVersion: 2
-  m_ClearFlags: 1
-  m_BackGroundColor: {r: 0.19215687, g: 0.3019608, b: 0.4745098, a: 0}
+  m_ClearFlags: 2
+  m_BackGroundColor: {r: 0, g: 0.3863957, b: 1, a: 0}
   m_projectionMatrixMode: 1
   m_GateFitMode: 2
   m_FOVAxisMode: 0
@@ -205,13 +205,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 330585543}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 1, z: -10}
+  m_LocalRotation: {x: 0.36618114, y: -0, z: -0, w: 0.9305436}
+  m_LocalPosition: {x: 3.77, y: 6.97, z: -4.42}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 42.961, y: 0, z: 0}
 --- !u!114 &330585547
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -464,6 +464,10 @@ MonoBehaviour:
   tilePrefab: {fileID: 5574697784090952922, guid: 9ffe283dbab87f14ba23d0bfd1402adc, type: 3}
   whitePiecePrefab: {fileID: 1538575550848062562, guid: c5dcdc41bf4ca9541bc5e2e317685c19, type: 3}
   blackPiecePrefab: {fileID: 1538575550848062562, guid: c5dcdc41bf4ca9541bc5e2e317685c19, type: 3}
+  dragHeight: 1
+  wiggleSpeed: 7
+  wiggleAmount: 5
+  isWhiteTurn: 1
 --- !u!4 &1984557374
 Transform:
   m_ObjectHideFlags: 0
