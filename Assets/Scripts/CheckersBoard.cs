@@ -1,6 +1,7 @@
 using UnityEngine;
+using Unity.Netcode; 
 
-public class CheckersBoard : MonoBehaviour
+public class CheckersBoard : NetworkBehaviour
 {
     [Header("Wygląd (Prefaby)")]
     public GameObject tilePrefab;
@@ -8,13 +9,13 @@ public class CheckersBoard : MonoBehaviour
     public GameObject blackPiecePrefab;
 
     [Header("Ustawienia Chwytania (Drag & Drop)")]
-    public float dragHeight = 0.8f;      
-    public float wiggleSpeed = 14f;     
-    public float wiggleAmount = 10f;    
+    public float dragHeight = 0.8f;
+    public float wiggleSpeed = 14f;
+    public float wiggleAmount = 10f;
 
     private GameObject[,] board = new GameObject[8, 8];
     private GameObject[,] pieces = new GameObject[8, 8];
-    private bool[,] isKing = new bool[8, 8]; 
+    private bool[,] isKing = new bool[8, 8];
 
     public bool isWhiteTurn = true;
 
@@ -34,6 +35,8 @@ public class CheckersBoard : MonoBehaviour
 
     private void Update()
     {
+        if (!NetworkManager.Singleton.IsListening) return;
+
         HandleDragAndDrop();
     }
 
@@ -55,14 +58,13 @@ public class CheckersBoard : MonoBehaviour
                 }
             }
         }
-        
+
         if (draggedPiece != null && Input.GetMouseButton(0))
         {
             Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
             if (boardPlane.Raycast(ray, out float distance))
             {
                 Vector3 hitPoint = ray.GetPoint(distance);
-
                 float wiggleX = Mathf.Sin(Time.time * wiggleSpeed) * wiggleAmount;
                 float wiggleZ = Mathf.Cos(Time.time * wiggleSpeed * 0.8f) * wiggleAmount;
 
@@ -70,7 +72,7 @@ public class CheckersBoard : MonoBehaviour
                 draggedPiece.transform.rotation = Quaternion.Euler(wiggleX, 0, wiggleZ);
             }
         }
-        
+
         if (draggedPiece != null && Input.GetMouseButtonUp(0))
         {
             Vector2Int targetCoord = GetMouseBoardCoordinates();
@@ -80,10 +82,8 @@ public class CheckersBoard : MonoBehaviour
             {
                 if (ValidMove(dragStartCoord.x, dragStartCoord.y, targetCoord.x, targetCoord.y))
                 {
-                    ExecuteMove(dragStartCoord.x, dragStartCoord.y, targetCoord.x, targetCoord.y);
+                    SubmitMoveServerRpc(dragStartCoord.x, dragStartCoord.y, targetCoord.x, targetCoord.y);
                     moveSuccessful = true;
-                    isWhiteTurn = !isWhiteTurn;
-                    Debug.Log(isWhiteTurn ? "Tura BIAŁYCH" : "Tura CZARNYCH");
                 }
             }
 
@@ -96,6 +96,23 @@ public class CheckersBoard : MonoBehaviour
             draggedPiece = null;
         }
     }
+    
+    
+    [ServerRpc(RequireOwnership = false)]
+    private void SubmitMoveServerRpc(int startX, int startZ, int endX, int endZ)
+    {
+        ExecuteMoveClientRpc(startX, startZ, endX, endZ);
+    }
+    
+    [ClientRpc]
+    private void ExecuteMoveClientRpc(int startX, int startZ, int endX, int endZ)
+    {
+        ExecuteMove(startX, startZ, endX, endZ);
+        isWhiteTurn = !isWhiteTurn; 
+        Debug.Log(isWhiteTurn ? "Tura BIAŁYCH" : "Tura CZARNYCH");
+    }
+
+    // -----------------------------
 
     private Vector2Int GetMouseBoardCoordinates()
     {
@@ -181,7 +198,7 @@ public class CheckersBoard : MonoBehaviour
         int deltaX = Mathf.Abs(endX - startX);
         int deltaZ = endZ - startZ;
         bool pieceIsKing = isKing[startX, startZ];
-        
+
         if (deltaX == 1)
         {
             if (pieceIsKing && Mathf.Abs(deltaZ) == 1) return true;
@@ -189,7 +206,7 @@ public class CheckersBoard : MonoBehaviour
             int allowedDirection = isWhiteTurn ? -1 : 1;
             if (deltaZ == allowedDirection) return true;
         }
-        
+
         if (deltaX == 2)
         {
             if (!pieceIsKing)
@@ -201,7 +218,7 @@ public class CheckersBoard : MonoBehaviour
             {
                 if (Mathf.Abs(deltaZ) != 2) return false;
             }
-            
+
             int midX = (startX + endX) / 2;
             int midZ = (startZ + endZ) / 2;
 
@@ -210,7 +227,7 @@ public class CheckersBoard : MonoBehaviour
                 bool midIsWhite = pieces[midX, midZ].name.StartsWith("Bialy_");
                 if (midIsWhite != isWhiteTurn)
                 {
-                    return true; 
+                    return true;
                 }
             }
         }
@@ -222,12 +239,12 @@ public class CheckersBoard : MonoBehaviour
     {
         GameObject piece = pieces[startX, startZ];
         bool pieceIsKing = isKing[startX, startZ];
-        
+
         if (Mathf.Abs(endX - startX) == 2)
         {
             int midX = (startX + endX) / 2;
             int midZ = (startZ + endZ) / 2;
-            
+
             if (pieces[midX, midZ] != null)
             {
                 Destroy(pieces[midX, midZ]);
@@ -235,14 +252,14 @@ public class CheckersBoard : MonoBehaviour
                 isKing[midX, midZ] = false;
             }
         }
-        
+
         piece.transform.position = new Vector3(endX, 0.15f, endZ);
         pieces[endX, endZ] = piece;
         pieces[startX, startZ] = null;
-        
+
         isKing[endX, endZ] = pieceIsKing;
         isKing[startX, startZ] = false;
-        
+
         CheckPromotion(endX, endZ);
     }
 
@@ -253,7 +270,6 @@ public class CheckersBoard : MonoBehaviour
             if (!isKing[x, z])
             {
                 isKing[x, z] = true;
-                
                 GameObject piece = pieces[x, z];
                 piece.transform.localScale = new Vector3(0.8f, 0.5f, 0.8f);
 
