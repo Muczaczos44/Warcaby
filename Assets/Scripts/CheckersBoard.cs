@@ -1,5 +1,5 @@
 using UnityEngine;
-using Unity.Netcode; 
+using Unity.Netcode;
 
 public class CheckersBoard : NetworkBehaviour
 {
@@ -50,7 +50,12 @@ public class CheckersBoard : NetworkBehaviour
             {
                 bool isPieceWhite = pieces[coord.x, coord.y].name.StartsWith("Bialy_");
 
-                if (isPieceWhite == isWhiteTurn)
+                // --- PODZIAŁ RÓL W SIECI ---
+                // Host gra BIAŁYMI (isWhiteTurn = true), Client gra CZARNYMI (isWhiteTurn = false)
+                bool isMyTurn = (NetworkManager.Singleton.IsHost && isWhiteTurn) || (!NetworkManager.Singleton.IsHost && !isWhiteTurn);
+
+                // Gracz może chwycić pionka TYLKO w swojej turze I TYLKO swojego koloru
+                if (isMyTurn && (isPieceWhite == isWhiteTurn))
                 {
                     draggedPiece = pieces[coord.x, coord.y];
                     dragStartCoord = coord;
@@ -96,19 +101,29 @@ public class CheckersBoard : NetworkBehaviour
             draggedPiece = null;
         }
     }
-    
-    
+
+    //  SEKCJA SIECIOWA
+
     [ServerRpc(RequireOwnership = false)]
-    private void SubmitMoveServerRpc(int startX, int startZ, int endX, int endZ)
+    private void SubmitMoveServerRpc(int startX, int startZ, int endX, int endZ, ServerRpcParams rpcParams = default)
     {
+        ulong senderClientId = rpcParams.Receive.SenderClientId;
+        bool isHostSender = (senderClientId == NetworkManager.ServerClientId);
+        
+        if ((isHostSender && !isWhiteTurn) || (!isHostSender && isWhiteTurn))
+        {
+            Debug.LogWarning("Odrzucono ruch z sieci: Nie Twoja tura!");
+            return;
+        }
+
         ExecuteMoveClientRpc(startX, startZ, endX, endZ);
     }
-    
+
     [ClientRpc]
     private void ExecuteMoveClientRpc(int startX, int startZ, int endX, int endZ)
     {
         ExecuteMove(startX, startZ, endX, endZ);
-        isWhiteTurn = !isWhiteTurn; 
+        isWhiteTurn = !isWhiteTurn;
         Debug.Log(isWhiteTurn ? "Tura BIAŁYCH" : "Tura CZARNYCH");
     }
 
